@@ -6,6 +6,7 @@ const OpenAI = require("openai");
 const dotenv = require("dotenv");
 dotenv.config();
 
+const PORT = process.env.PORT || 5500;
 // const apiKey = "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";
 
 const openai = new OpenAI({
@@ -145,6 +146,6 @@ app.post("/voice-chat/confirm-or-change-input", async (req, res) => {
   res.send(twiml.toString());
 });
 
-app.listen(process.env.port, () => {
-  console.log(`Server is running on port ${process.env.port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
