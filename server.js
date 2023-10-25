@@ -23,7 +23,6 @@ const authToken = process.env.authToken;
 
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
-var userSpeech_question;
 // Initialize the Twilio client
 const client = twilio(accountSid, authToken);
 
@@ -36,12 +35,15 @@ app.post("/", (req, res) => {
   // Make a Twilio call
   client.calls
     .create({
-      url: "https://b228-2401-4900-3b3a-657e-11f4-da77-6373-f2b6.ngrok-free.app/",
+      url: "https://eabc-2401-4900-3b3a-657e-38ee-c966-d6b1-4310.ngrok-free.app/",
       to: `+91 ${phoneNumber}`,
       from: "+1 229 394 2537", // Update with your Twilio phone number
     })
     .then((call) => console.log(`Call SID: ${call.sid}`))
-    .catch((error) => console.error(`Error making call: ${error.message}`));
+    .catch((error) => {
+      // console.error(`Error making call: ${error.message}`);
+      // res.status(401).json({ message: error.message });
+    });
 
   const twiml = new twilio.twiml.VoiceResponse();
 
@@ -63,9 +65,11 @@ app.post("/", (req, res) => {
   res.send(twiml.toString());
 });
 
+var userSpeech_question;
+
 // Create a route for handling chatbot responses
 app.post("/voice-chat/respond", (req, res) => {
-  userSpeech_question = req.body.SpeechResult;
+  userSpeech_question = req?.body?.SpeechResult;
 
   const twiml = new twilio.twiml.VoiceResponse();
 
@@ -87,13 +91,11 @@ app.post("/voice-chat/respond", (req, res) => {
   res.send(twiml.toString());
 });
 
-// Create a route to confirm or change the user's input
 app.post("/voice-chat/confirm-or-change-input", async (req, res) => {
   const userSpeech_Confirmation = req.body.SpeechResult;
   const twiml = new twilio.twiml.VoiceResponse();
-  console.log("/voice-chat/confirm-or-change-input", userSpeech_Confirmation);
 
-  const user_Speech = userSpeech_Confirmation.replace(/\./g, "").toLowerCase();
+  const user_Speech = userSpeech_Confirmation?.replace(/\./g, "").toLowerCase();
 
   console.log("user_Speech", user_Speech);
   if (user_Speech === "confirm") {
@@ -101,49 +103,43 @@ app.post("/voice-chat/confirm-or-change-input", async (req, res) => {
       "Great! Let's proceed. Please wait while we are processing your request."
     );
 
-    // // Start the API call asynchronously
-    openai.chat.completions
-      .create({
+    try {
+      const result = await openai.chat.completions.create({
         messages: [{ role: "user", content: userSpeech_question }],
         model: "gpt-3.5-turbo",
-      })
-      .then((result) => {
-        // Handle the API result and log it
-        const results = result?.choices[0]?.message?.content || "";
-        console.log("results", results, typeof results);
-
-        if (results !== "") {
-          twiml.pause();
-          twiml.say(`${results}`);
-          res.type("text/xml");
-          res.send(twiml.toString());
-        } else {
-          // If no response from GPT, handle it or provide a fallback response
-          twiml.say(
-            "I'm sorry, but I couldn't generate a response at the moment."
-          );
-          res.type("text/xml");
-          res.send(twiml.toString());
-        }
-      })
-      .catch((err) => {
-        // An error occurred, you can handle it here
-        console.error(err);
-        // Provide an error response if needed
-        twiml.say("An error occurred while processing your request.");
-        res.type("text/xml");
-        res.send(twiml.toString());
       });
+
+      // Handle the API result and log it
+      const results = result?.choices[0]?.message?.content || "";
+      // console.log("results", results, typeof results);
+
+      if (results !== "") {
+        twiml.say(`${results}`);
+      } else {
+        // If no response from GPT, handle it or provide a fallback response
+        twiml.say(
+          "I'm sorry, but I couldn't generate a response at the moment."
+        );
+      }
+    } catch (err) {
+      // An error occurred, you can handle it here
+      console.error(err);
+      // Provide an error response if needed
+      twiml.say("An error occurred while processing your request.");
+    }
+
+    res.type("text/xml");
+    res.send(twiml.toString());
   } else if (user_Speech === "change") {
     twiml.redirect("/"); // Allow the user to provide a new input
+    res.type("text/xml");
+    res.send(twiml.toString());
   } else {
     twiml.say("I didn't understand. Please say 'confirm' or 'change'");
     twiml.redirect("/voice-chat/respond");
+    res.type("text/xml");
+    res.send(twiml.toString());
   }
-
-  // Return the response to Twilio
-  res.type("text/xml");
-  res.send(twiml.toString());
 });
 
 app.listen(PORT, () => {
