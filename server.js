@@ -1,28 +1,30 @@
 const express = require("express");
 const twilio = require("twilio");
-const axios = require("axios");
 const cors = require("cors");
 const app = express();
-const port = 3300;
 const OpenAI = require("openai");
 const dotenv = require("dotenv");
 dotenv.config();
+
+// const apiKey = "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";
 
 const openai = new OpenAI({
   apiKey: process.env.apiKey, // defaults to process.env["OPENAI_API_KEY"]
 });
 
+// const port = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Replace these with your Twilio Account SID and Auth Token
-// const accountSid = process.env.accountSid;
-// const authToken = process.env.authToken;
+const accountSid = process.env.accountSid;
+const authToken = process.env.authToken;
+
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 var userSpeech_question;
 // Initialize the Twilio client
-const client = twilio(process.env.accountSid, process.env.authToken);
+const client = twilio(accountSid, authToken);
 
 // Create a route for voice interactions
 app.post("/", (req, res) => {
@@ -33,7 +35,7 @@ app.post("/", (req, res) => {
   // Make a Twilio call
   client.calls
     .create({
-      url: "https://5006-223-228-249-66.ngrok-free.app/",
+      url: "https://b228-2401-4900-3b3a-657e-11f4-da77-6373-f2b6.ngrok-free.app/",
       to: `+91 ${phoneNumber}`,
       from: "+1 229 394 2537", // Update with your Twilio phone number
     })
@@ -143,6 +145,6 @@ app.post("/voice-chat/confirm-or-change-input", async (req, res) => {
   res.send(twiml.toString());
 });
 
-app.listen(port, () => {
+app.listen(process.env.port, () => {
   console.log(`Server is running on port ${process.env.port}`);
 });
