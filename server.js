@@ -35,7 +35,7 @@ app.post("/", (req, res) => {
   // Make a Twilio call
   client.calls
     .create({
-      url: "https://eabc-2401-4900-3b3a-657e-38ee-c966-d6b1-4310.ngrok-free.app/",
+      url: "https://backend-voicebot-ai.onrender.com/",
       to: `+91 ${phoneNumber}`,
       from: "+1 229 394 2537", // Update with your Twilio phone number
     })
