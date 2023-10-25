@@ -87,7 +87,7 @@ app.post("/", async (req, res) => {
 
     // Make a Twilio call
     const call = await client.calls.create({
-      url: "https://76aa-2401-4900-3b36-4199-6837-a32e-42f1-cdcf.ngrok-free.app/voice-chat", // Replace with your actual URL
+      url: "https://backend-voicebot-ai.onrender.com/voice-chat", // Replace with your actual URL
       to: `+91${phoneNumber}`,
       from: "+15038280821", // Update with your Twilio phone number
     });
