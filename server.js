@@ -9,17 +9,14 @@ dotenv.config();
 var userSpeech_question;
 var phoneNumber;
 const PORT = process.env.PORT || 5500;
-// const apiKey = "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";
 
 const openai = new OpenAI({
-  apiKey: process.env.apiKey, // defaults to process.env["OPENAI_API_KEY"]
+  apiKey: process.env.apiKey,
 });
 
-// const port = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Replace these with your Twilio Account SID and Auth Token
 const accountSid = process.env.accountSid;
 const authToken = process.env.authToken;
 
@@ -30,69 +27,19 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // Initialize the Twilio client
 const client = twilio(accountSid, authToken);
 
-// // Create a route for voice interactions
-// app.post("/", async (req, res) => {
-//   const twiml = new twilio.twiml.VoiceResponse();
-//   let phoneNumber; // Define phoneNumber within the route handler function scope
-
-//   try {
-//     console.log("api started!!, 1");
-
-//     phoneNumber = req.body.phoneNumber;
-//     console.log("phoneNumber", phoneNumber);
-//     // Make a Twilio call
-//     const call = await client.calls.create({
-//       url: "https://76aa-2401-4900-3b36-4199-6837-a32e-42f1-cdcf.ngrok-free.app",
-//       to: `+91 ${phoneNumber}`,
-//       from: "+15038280821", // Update with your Twilio phone number
-//     });
-
-//     console.log(`Call SID: ${call.sid}`);
-
-//     // Greet the user with a message using AWS Polly Neural voice
-//     twiml.say(
-//       "Hey! I'm Sophia from Ellocent Labs, What would you like to talk about today?"
-//     );
-
-//     // Listen to the user's speech and pass the input to the /respond endpoint
-//     twiml.gather({
-//       speechTimeout: "auto",
-//       speechModel: "experimental_conversations",
-//       input: "speech",
-//       action: "/voice-chat/respond", // Send the collected input to /voice-chat/respond
-//     });
-
-//     // Return the response to Twilio
-//     res.type("text/xml");
-//     res.send(twiml.toString());
-//   } catch (error) {
-//     console.error(`Error making call: ${error.message}`);
-//     res.status(500).json({ message: error.message });
-//   }
-// });
-
-// Create a route for voice interactions
-
 app.post("/", async (req, res) => {
   try {
-    // console.log("api started!!, 1");
-
     const phone_Number = req?.body?.phoneNumber;
     if (phone_Number) {
       phoneNumber = phone_Number;
     }
-    // phoneNumber = phone_Number;
-    // console.log("phoneNumber", phoneNumber, typeof phoneNumber);
-    // console.log("phone___Number", phone_Number, typeof phone_Number);
 
     // Make a Twilio call
     const call = await client.calls.create({
-      url: "https://backend-voicebot-ai.onrender.com/voice-chat", // Replace with your actual URL
+      url: `${process.env.SERVER_URL}/voice-chat`,
       to: `+91${phoneNumber}`,
-      from: "+15038280821", // Update with your Twilio phone number
+      from: `${process.env.callFrom}`,
     });
-
-    // console.log(`Call SID: ${call.sid}`);
 
     setTimeout(() => {
       if (call.sid) {
@@ -102,7 +49,6 @@ app.post("/", async (req, res) => {
       }
     }, 6000);
   } catch (error) {
-    // console.error(`Error making call: ${error.message}`);
     res.status(500).json({ message: error.message });
   }
 });
@@ -111,15 +57,10 @@ app.post("/voice-chat", async (req, res) => {
   const twiml = new twilio.twiml.VoiceResponse();
 
   try {
-    console.log("api started!!, 1");
-
     const phone_Number = req?.body?.phoneNumber;
     if (phone_Number) {
       phoneNumber = phone_Number;
     }
-    // phoneNumber = phone_Number;
-    console.log("phoneNumber", phoneNumber, typeof phoneNumber);
-    console.log("phone___Number", phone_Number, typeof phone_Number);
 
     // Greet the user with a message
     twiml.say(
@@ -186,7 +127,6 @@ app.post("/voice-chat/confirm-or-change-input", async (req, res) => {
       const gpt_Result = result?.choices[0]?.message?.content || "";
       console.log(gpt_Result);
 
-      // twiml.say(results);
       if (gpt_Result) {
         twiml.say(`here is your results, ${gpt_Result} `);
 
@@ -207,9 +147,7 @@ app.post("/voice-chat/confirm-or-change-input", async (req, res) => {
       res.send(twiml.toString());
     }
   } catch (err) {
-    // An error occurred, you can handle it here
     console.error(err);
-    // Provide an error response if needed
     const twiml = new twilio.twiml.VoiceResponse();
     twiml.say("An error occurred while processing your request.");
     res.type("text/xml");
@@ -217,6 +155,7 @@ app.post("/voice-chat/confirm-or-change-input", async (req, res) => {
   }
 });
 
+// app running port
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
