@@ -28,6 +28,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 const client = twilio(accountSid, authToken);
 
 app.post("/", async (req, res) => {
+  console.log(" in /");
   try {
     const phone_Number = req?.body?.phoneNumber;
     if (phone_Number) {
@@ -54,6 +55,8 @@ app.post("/", async (req, res) => {
 });
 
 app.post("/voice-chat", async (req, res) => {
+  console.log(" in /voice-chat");
+
   const twiml = new twilio.twiml.VoiceResponse();
 
   try {
@@ -72,7 +75,7 @@ app.post("/voice-chat", async (req, res) => {
       speechTimeout: "auto",
       speechModel: "experimental_conversations",
       input: "speech",
-      action: "/voice-chat/respond", // Send the collected input to /voice-chat/respond
+      action: "/voice-chat/thanku", // Send the collected input to /voice-chat/respond
     });
 
     // Return the response to Twilio
@@ -84,74 +87,54 @@ app.post("/voice-chat", async (req, res) => {
   }
 });
 
-// Create a route for handling chatbot responses
-app.post("/voice-chat/respond", (req, res) => {
-  userSpeech_question = req?.body?.SpeechResult;
-
-  const twiml = new twilio.twiml.VoiceResponse();
-
-  if (userSpeech_question) {
-    twiml.say(
-      `You said: ${userSpeech_question}. Say "confirm" to proceed or "change" to provide a new input.`
-    );
-  }
-
-  twiml.gather({
-    speechTimeout: "auto",
-    speechModel: "experimental_conversations",
-    input: "speech",
-    action: "/voice-chat/confirm-or-change-input",
-  });
-
-  // Return the response to Twilio
-  res.type("text/xml");
-  res.send(twiml.toString());
-});
-
-app.post("/voice-chat/confirm-or-change-input", async (req, res) => {
-  const userSpeech_Confirmation = req.body.SpeechResult;
-  const user_Speech = userSpeech_Confirmation?.replace(/\./g, "").toLowerCase();
-
-  console.log("user_Speech", user_Speech);
-  console.log("userSpeech_question", userSpeech_question);
-  const twiml = new twilio.twiml.VoiceResponse();
+app.post("/voice-chat/thanku", async (req, res) => {
+  console.log("in /voice-chat/thanku");
 
   try {
-    if (user_Speech === "confirm") {
-      const result = await openai.chat.completions.create({
-        messages: [{ role: "user", content: userSpeech_question }],
-        model: "gpt-3.5-turbo",
-      });
+    const userSpeech_Confirmation = req.body.SpeechResult;
+    console.log("userSpeech_Confirmation", userSpeech_Confirmation);
+    // Create a TwiML response object
+    const twiml = new twilio.twiml.VoiceResponse();
 
-      // Handle the API result and log it
-      const gpt_Result = result?.choices[0]?.message?.content || "";
-      console.log(gpt_Result);
+    // Play the "Please wait" message
+    twiml.say("Please wait while we process your request.", {
+      voice: "woman", // You can set the desired voice here
+    });
 
-      if (gpt_Result) {
-        twiml.say(`here is your results, ${gpt_Result} `);
+    // Process the chat GPT request
+    const result = await openai.chat.completions.create({
+      messages: [{ role: "user", content: userSpeech_Confirmation }],
+      model: "gpt-3.5-turbo",
+    });
 
-        // Return the response to Twilio
-        res.type("text/xml");
-        res.send(twiml.toString());
-      }
-    } else if (user_Speech === "change") {
-      const twiml = new twilio.twiml.VoiceResponse();
-      twiml.redirect("/voice-chat"); // Allow the user to provide a new input
+    // Handle the API result and log it
+    const gpt_Result = result?.choices[0]?.message?.content || "";
+
+    if (gpt_Result) {
+      console.log("gpt_Result", gpt_Result);
+
+      // Create a new TwiML response for the GPT response
+      const twimlResponse = new twilio.twiml.VoiceResponse();
+
+      // Say the GPT response
+      twimlResponse.say(`Here is your result: ${gpt_Result}`);
+
+      // Return the GPT response to Twilio
       res.type("text/xml");
-      res.send(twiml.toString());
+      res.send(twimlResponse.toString());
     } else {
-      const twiml = new twilio.twiml.VoiceResponse();
-      twiml.say("I didn't understand. Please say 'confirm' or 'change'");
-      twiml.redirect("/voice-chat");
+      // If there's no GPT response, redirect to the /voice-chat/thanku route to check again
+      twiml.redirect("/voice-chat/thanku");
       res.type("text/xml");
       res.send(twiml.toString());
     }
   } catch (err) {
     console.error(err);
-    const twiml = new twilio.twiml.VoiceResponse();
-    twiml.say("An error occurred while processing your request.");
+    // If there is an error, handle it and respond accordingly
+    const twimlError = new twilio.twiml.VoiceResponse();
+    twimlError.say("An error occurred while processing your request.");
     res.type("text/xml");
-    res.send(twiml.toString());
+    res.send(twimlError.toString());
   }
 });
 
