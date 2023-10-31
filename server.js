@@ -38,7 +38,7 @@ app.post("/", async (req, res) => {
     // Make a Twilio call
     const call = await client.calls.create({
       url: `${process.env.SERVER_URL}/voice-chat`,
-      to: `+91${phoneNumber}`,
+      to: `${phoneNumber}`,
       from: `${process.env.callFrom}`,
     });
 
